@@ -1,12 +1,8 @@
-
+import PowerBalannceChart from "./charts/PowerBalance";
 function App() {
   return (
-    <div className="">
-      <header className="">
-        <p className=''>
-          Hello world
-        </p>
-      </header>
+    <div className="w-2/3 m-auto">
+      <PowerBalannceChart />
     </div>
   );
 }
