@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react"
 import {
-    Chart as ChartJS,
+    Chart,
     CategoryScale,
     LinearScale,
     PointElement,
@@ -8,12 +8,14 @@ import {
     Title,
     Tooltip,
     Legend,
-} from "chart.js";
-import { Line, PolarArea } from "react-chartjs-2";
-import Papa from "papaparse";
-import Palette from "./colors";
+    registerables,
+} from "chart.js"
+import { Line, PolarArea } from "react-chartjs-2"
+import Papa from "papaparse"
+import Palette from "./colors"
 
-ChartJS.register(
+Chart.register(
+    ...registerables,
     CategoryScale,
     LinearScale,
     PointElement,
@@ -21,7 +23,7 @@ ChartJS.register(
     Title,
     Tooltip,
     Legend
-);
+)
 
 export const options = {
     responsive: true,
@@ -36,16 +38,52 @@ export const options = {
         //     text: "Chart.js Line Chart",
         // },
     },
-};
+}
 
 const PowerBalannceChart = () => {
-    const [labels, setLabels] = useState([]);
-    const [leftBalance, setLeftBalance] = useState([]);
-    const [rightBalance, setRightBalance] = useState([]);
-    const [dataset, setDataset] = useState([]);
-    const [types, setTypes] = useState([]);
-    const [chartData, setChartData] = useState([]);
+    const [labels, setLabels] = useState([])
+    const [leftBalance, setLeftBalance] = useState([])
+    const [rightBalance, setRightBalance] = useState([])
+    const [dataset, setDataset] = useState([])
+    const [types, setTypes] = useState([])
+    const [chartData, setChartData] = useState([])
     const [metric, setMetric] = useState(0)
+    
+
+    // initialize chart
+    const chartContainer = useRef(null)
+    const [chartInstance, setChartInstance] = useState(null)
+
+    const data = {
+        labels,
+        datasets: chartData.length > 1 ? [chartData[metric]] : chartData,
+    }
+
+    const chartConfig = {
+        options: options,
+        type:"line",
+        data: data
+    }
+
+    const handle = {
+        parseUpload: (e) => {
+            const files = e.target.files
+            if (files) {
+                Papa.parse(files[0], {
+                    complete: function (results) {
+                        setLeftBalance(results.data.map((value, i) => value[12]))
+                        setLabels(results.data.map((value, i) => new Date(value[0] * 1000)))
+                        setTypes(results.data[0])
+                        setDataset(results.data[0].map((_, i) => results.data.map((row) => row[i])))
+                        // setDataset(
+                        //     [results.data[0].map((column, i) => column + results.data[i] )
+
+                        //     ]);
+                    },
+                })
+            }
+        },
+    }
 
     useEffect(() => {
         setChartData(
@@ -55,60 +93,30 @@ const PowerBalannceChart = () => {
                 borderColor: Palette.rgba(1)[i],
                 backgroundColor: Palette.rgba(0.5)[i],
             }))
-        );
-    }, dataset);
+        )
+    }, dataset)
 
-    const data = {
-        labels,
-        datasets: chartData.length > 1 ? [chartData[metric]] : chartData
-    };
+    useEffect(() => {
+        if (chartInstance !== null) {
+            chartInstance.destroy()
+        }
+        const newChartInstance = new Chart(chartContainer.current, chartConfig)
+        setChartInstance(newChartInstance)
+    }, dataset)
 
-    const handle = {
-        parseUpload: (e) => {
-            const files = e.target.files;
-            if (files) {
-                Papa.parse(files[0], {
-                    complete: function (results) {
-                        setLeftBalance(
-                            results.data.map((value, i) => value[12])
-                        );
-                        setLabels(
-                            results.data.map(
-                                (value, i) => new Date(value[0] * 1000)
-                            )
-                        );
-                        setTypes(results.data[0]);
-                        setDataset(
-                            results.data[0].map((_, i) =>
-                                results.data.map((row) => row[i])
-                            )
-                        );
-                        // setDataset(
-                        //     [results.data[0].map((column, i) => column + results.data[i] )
-
-                        //     ]);
-                    },
-                });
-            }
-        },
-    };
-    
-
-    console.group("data");
-    console.log("types", types);
-    console.log("dataset", dataset);
-    console.log("chart data", chartData);
-    console.log("metric", chartData[metric]);
-    console.groupEnd();
+    console.group("data")
+    console.log(chartInstance)
+    console.log(chartContainer)
+    console.log("types", types)
+    console.log("dataset", dataset)
+    console.log("chart data", data)
+    console.log("metric", chartData[metric])
+    console.groupEnd()
 
     return (
         <>
             <div className="rounded bg-gray-500 px-4 py-2 flex items-center gap-2">
-                <input
-                    type="file"
-                    accept=".csv,.xlsx,.xls"
-                    onChange={handle.parseUpload}
-                />
+                <input type="file" accept=".csv,.xlsx,.xls" onChange={handle.parseUpload} />
                 <label className="text-white ml-auto" for="charts">
                     Choose a metric:
                 </label>
@@ -117,7 +125,7 @@ const PowerBalannceChart = () => {
                     name="chart"
                     id="cars"
                     form="chartform"
-                    onChange={(e)=> setMetric(e.target.value)}
+                    onChange={(e) => setMetric(e.target.value)}
                 >
                     {types.map((metric, i) => (
                         <option value={i}>{metric}</option>
@@ -125,9 +133,10 @@ const PowerBalannceChart = () => {
                 </select>
             </div>
 
+            <canvas ref={chartContainer} />
             <Line options={options} data={data} />
         </>
-    );
-};
+    )
+}
 
-export default PowerBalannceChart;
+export default PowerBalannceChart
